@@ -19,10 +19,17 @@ export const HomePage = () => {
 
   const handleSuggestionClick = (suggestion: string) => {
     setInputValue(suggestion);
+    // 可选：直接提交建议，无需手动确认
+    // handleSubmit(suggestion);
   };
 
   const handleSubmit = (content: string) => {
     if (content.trim()) {
+      // 清空之前的缓存，准备开始新的会话
+      sessionStorage.removeItem('chatPageResults');
+      sessionStorage.removeItem('chatPagePrompt');
+      sessionStorage.removeItem('hasProcessedInitialMessage');
+
       // 跳转到聊天页面，并传递初始消息
       navigate('/chat', { state: { initialMessage: content } });
       // 清空输入框

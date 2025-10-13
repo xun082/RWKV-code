@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
-import { MarkdownRenderer } from '@/components/business/MarkdownRenderer';
-import { Code2, Eye, Loader2 } from 'lucide-react';
+import { Loader2, Check, Maximize2, Trash2 } from 'lucide-react';
 import { AIService } from '@/service/ai';
-import type { Message, ConversationMessage } from '@/types/chat';
+
+interface GeneratedResult {
+  id: string;
+  content: string;
+  htmlCode: string;
+  isLoading: boolean;
+}
 
 const DEFAULT_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -18,252 +23,260 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
   <div class="text-center">
     <h1 class="text-4xl font-bold text-gray-800 mb-4">Welcome!</h1>
-    <p class="text-gray-600">Tell me what you want to build, and I'll create it for you.</p>
+    <p class="text-gray-600">输入你的想法，我将为你生成 20 个不同的设计方案</p>
   </div>
 </body>
 </html>`;
 
 export const ChatPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const initialMessage = (location.state as { initialMessage?: string })
     ?.initialMessage;
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
-  const [htmlCode, setHtmlCode] = useState(DEFAULT_HTML);
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const streamingMessageIdRef = useRef<string | null>(null);
+  // 从 sessionStorage 恢复状态
+  const [results, setResults] = useState<GeneratedResult[]>(() => {
+    const saved = sessionStorage.getItem('chatPageResults');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [prompt, setPrompt] = useState(() => {
+    return sessionStorage.getItem('chatPagePrompt') || '';
+  });
+  const [completedCount, setCompletedCount] = useState(0);
+  const totalCount = 20;
 
-  // 自动滚动到底部
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // 保存状态到 sessionStorage
+  useEffect(() => {
+    if (results.length > 0) {
+      sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+    }
+  }, [results]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (prompt) {
+      sessionStorage.setItem('chatPagePrompt', prompt);
+    }
+  }, [prompt]);
 
-  // 处理初始消息 - 只执行一次
+  // 处理初始消息 - 只执行一次，并且如果已经有结果就不重复执行
   const hasProcessedInitialMessage = useRef(false);
   useEffect(() => {
-    if (initialMessage && !hasProcessedInitialMessage.current) {
+    // 如果已经有保存的结果，说明之前已经生成过了，不需要再处理
+    const hasExistingResults = results.length > 0 && !results[0]?.isLoading;
+
+    if (
+      initialMessage &&
+      !hasProcessedInitialMessage.current &&
+      !hasExistingResults
+    ) {
       hasProcessedInitialMessage.current = true;
-      handleSendMessage(initialMessage);
+      // 标记已处理，避免返回后重复执行
+      sessionStorage.setItem('hasProcessedInitialMessage', 'true');
+      handleGenerate(initialMessage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSendMessage = async (content: string) => {
-    // 添加用户消息
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
+  const handleGenerate = async (userPrompt: string) => {
+    setPrompt(userPrompt);
+    setIsGenerating(true);
+    setCompletedCount(0);
+    setSelectedIndex(null);
 
-    // 创建临时 AI 消息 ID
-    const tempAIMessageId = (Date.now() + 1).toString();
-    streamingMessageIdRef.current = tempAIMessageId;
+    // 清除旧的结果和标记
+    sessionStorage.removeItem('chatPageResults');
+    sessionStorage.removeItem('hasProcessedInitialMessage');
 
-    // 添加一个空的 AI 消息占位
-    const placeholderMessage: Message = {
-      id: tempAIMessageId,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, placeholderMessage]);
+    // 初始化 20 个占位符
+    const placeholders: GeneratedResult[] = Array.from(
+      { length: totalCount },
+      (_, i) => ({
+        id: `result-${i}`,
+        content: '',
+        htmlCode: DEFAULT_HTML,
+        isLoading: true,
+      }),
+    );
+    setResults(placeholders);
 
     try {
-      // 构建对话历史
-      const conversationHistory: ConversationMessage[] = messages.map(
-        (msg) => ({
-          role: msg.role,
-          content: msg.content,
-        }),
-      );
-
-      // 使用流式 API
-      let fullContent = '';
-
-      await AIService.streamChat(
-        content,
-        conversationHistory,
-        (chunk: string) => {
-          fullContent += chunk;
-
-          // 实时更新消息内容
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === tempAIMessageId
-                ? { ...msg, content: fullContent }
-                : msg,
+      await AIService.generateMultipleResponses(
+        userPrompt,
+        totalCount,
+        (index, content, htmlCode) => {
+          // 实时更新每个结果
+          setResults((prev) =>
+            prev.map((result, i) =>
+              i === index
+                ? { ...result, content, htmlCode, isLoading: false }
+                : result,
             ),
           );
-
-          // 实时检查是否有 HTML 代码可以预览
-          const extractedHTML = AIService.extractHTMLCode(fullContent);
-          if (extractedHTML) {
-            const wrappedHTML = AIService.wrapHTML(extractedHTML);
-            setHtmlCode(wrappedHTML);
-          }
+          setCompletedCount((prev) => prev + 1);
         },
       );
-
-      // 流式结束后，最终更新一次
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempAIMessageId ? { ...msg, content: fullContent } : msg,
-        ),
-      );
-
-      const finalHTML = AIService.extractHTMLCode(fullContent);
-      if (finalHTML) {
-        const wrappedHTML = AIService.wrapHTML(finalHTML);
-        setHtmlCode(wrappedHTML);
-      }
     } catch (error) {
-      console.error('AI 调用失败:', error);
-      // 更新为错误消息
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempAIMessageId
-            ? { ...msg, content: '抱歉，我遇到了一些问题。请稍后再试。' }
-            : msg,
-        ),
-      );
+      console.error('生成失败:', error);
     } finally {
-      setIsLoading(false);
-      streamingMessageIdRef.current = null;
+      setIsGenerating(false);
     }
   };
 
-  return (
-    <div className="flex h-screen bg-background dark:bg-[#1e1e1e]">
-      {/* 左侧聊天区域 */}
-      <div className="w-[45%] flex flex-col border-r border-border dark:border-gray-700">
-        {/* 聊天消息区域 */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  message.role === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-muted dark:bg-[#2d2d2d] text-foreground dark:text-white'
-                }`}
-              >
-                {message.role === 'user' ? (
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.content}
-                  </p>
-                ) : (
-                  <div className="text-sm leading-relaxed">
-                    <MarkdownRenderer content={message.content} />
-                    {isLoading &&
-                      message.id === streamingMessageIdRef.current && (
-                        <span className="inline-block w-2 h-4 ml-1 bg-blue-600 animate-pulse"></span>
-                      )}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+  const handleOpenDetail = (index: number) => {
+    if (results[index] && !results[index].isLoading) {
+      // 保存当前状态到 sessionStorage，确保返回时不会丢失
+      sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+      sessionStorage.setItem('chatPagePrompt', prompt);
 
-          {/* 加载状态 */}
-          {isLoading && messages.length === 0 && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-muted dark:bg-[#2d2d2d] text-foreground dark:text-white">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">AI 正在思考...</span>
-                </div>
-              </div>
+      navigate('/detail', {
+        state: {
+          htmlCode: results[index].htmlCode,
+          index: index,
+        },
+      });
+    }
+  };
+
+  const handleClearResults = () => {
+    setResults([]);
+    setPrompt('');
+    setSelectedIndex(null);
+    sessionStorage.removeItem('chatPageResults');
+    sessionStorage.removeItem('chatPagePrompt');
+    sessionStorage.removeItem('hasProcessedInitialMessage');
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-background dark:bg-[#1e1e1e]">
+      {/* 顶部：输入区域 */}
+      <div className="border-b border-border dark:border-gray-700 bg-white dark:bg-[#252525]">
+        <div className="max-w-4xl mx-auto p-4">
+          <ChatgptPromptInput
+            placeholder="描述你想要创建的网页..."
+            onSubmit={handleGenerate}
+            disabled={isGenerating}
+          />
+          {isGenerating && (
+            <div className="mt-3 flex items-center justify-center gap-3 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>
+                正在生成 {completedCount}/{totalCount} 个设计方案...
+              </span>
             </div>
           )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* 输入区域 */}
-        <div className="p-4 border-t border-border dark:border-gray-700">
-          <ChatgptPromptInput
-            placeholder="Ask me anything..."
-            onSubmit={handleSendMessage}
-            disabled={isLoading}
-          />
+          {prompt && !isGenerating && (
+            <div className="mt-2 flex items-center justify-center gap-3">
+              <div className="text-sm text-muted-foreground">
+                当前 Prompt: <span className="font-medium">{prompt}</span>
+              </div>
+              <button
+                onClick={handleClearResults}
+                className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+              >
+                <Trash2 className="h-3 w-3" />
+                清空重新开始
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 右侧编辑器/预览区域 */}
-      <div className="flex-1 flex flex-col">
-        {/* Tab 切换 */}
-        <div className="flex items-center gap-1 px-4 py-2 border-b border-border dark:border-gray-700 bg-muted/30 dark:bg-[#252525]">
-          <button
-            onClick={() => setActiveTab('preview')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-              activeTab === 'preview'
-                ? 'bg-background dark:bg-[#1e1e1e] text-foreground dark:text-white shadow-sm'
-                : 'text-muted-foreground dark:text-gray-400 hover:text-foreground dark:hover:text-white'
-            }`}
-          >
-            <Eye className="h-4 w-4" />
-            Preview
-          </button>
-          <button
-            onClick={() => setActiveTab('code')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-              activeTab === 'code'
-                ? 'bg-background dark:bg-[#1e1e1e] text-foreground dark:text-white shadow-sm'
-                : 'text-muted-foreground dark:text-gray-400 hover:text-foreground dark:hover:text-white'
-            }`}
-          >
-            <Code2 className="h-4 w-4" />
-            Code
-          </button>
-        </div>
+      {/* 中间：网页预览网格 */}
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-[#1a1a1a]">
+        <div className="grid grid-cols-5 gap-4 max-w-[2000px] mx-auto">
+          {results.map((result, index) => (
+            <div
+              key={result.id}
+              onClick={() => setSelectedIndex(index)}
+              onDoubleClick={() => handleOpenDetail(index)}
+              className={`group flex flex-col rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:shadow-xl ${
+                selectedIndex === index
+                  ? 'border-blue-500 shadow-lg shadow-blue-500/50'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-300'
+              }`}
+            >
+              {result.isLoading ? (
+                <div className="w-full h-[610px] bg-white dark:bg-[#2d2d2d] flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                </div>
+              ) : (
+                <>
+                  {/* 上部分：预览效果 - 高度翻倍 */}
+                  <div className="relative h-[480px] bg-white border-b-2 border-gray-300 dark:border-gray-600">
+                    <iframe
+                      srcDoc={result.htmlCode}
+                      className="w-full h-full border-0 bg-white pointer-events-none"
+                      title={`Preview ${index + 1}`}
+                      sandbox="allow-scripts"
+                    />
+                    {/* 全屏按钮 */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDetail(index);
+                      }}
+                      className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-md p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      title="打开详情页编辑"
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                    </button>
+                    {/* 选中标记 */}
+                    {selectedIndex === index && (
+                      <div className="absolute top-2 left-2 bg-blue-500 text-white rounded-full p-1 shadow-lg">
+                        <Check className="h-4 w-4" />
+                      </div>
+                    )}
+                    {/* 底部标签 */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
+                      <span className="text-white text-xs font-semibold">
+                        方案 {index + 1}
+                      </span>
+                    </div>
+                  </div>
 
-        {/* 内容区域 */}
-        <div className="flex-1 overflow-hidden styled-scrollbar">
-          {activeTab === 'preview' ? (
-            <iframe
-              srcDoc={htmlCode}
-              className="w-full h-full border-0 bg-white"
-              title="Preview"
-              sandbox="allow-scripts allow-forms allow-modals allow-same-origin"
-            />
-          ) : (
-            <Editor
-              height="100%"
-              defaultLanguage="html"
-              value={htmlCode}
-              onChange={(value) => setHtmlCode(value || '')}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-                wordWrap: 'on',
-                scrollbar: {
-                  vertical: 'hidden',
-                  horizontal: 'hidden',
-                  useShadows: false,
-                  verticalScrollbarSize: 0,
-                  horizontalScrollbarSize: 0,
-                },
-              }}
-            />
-          )}
+                  {/* 下部分：代码 - 高度减半 */}
+                  <div className="h-[130px] bg-[#1e1e1e] relative">
+                    <div className="absolute top-0 left-0 right-0 px-2 py-1 bg-[#252525] border-b border-gray-700">
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        HTML Code
+                      </span>
+                    </div>
+                    <div className="pt-6 h-full">
+                      <Editor
+                        height="100%"
+                        defaultLanguage="html"
+                        value={result.htmlCode}
+                        theme="vs-dark"
+                        options={{
+                          readOnly: true,
+                          minimap: { enabled: false },
+                          fontSize: 9,
+                          lineNumbers: 'on',
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                          tabSize: 2,
+                          wordWrap: 'off',
+                          scrollbar: {
+                            vertical: 'auto',
+                            horizontal: 'auto',
+                            verticalScrollbarSize: 5,
+                            horizontalScrollbarSize: 5,
+                          },
+                          folding: false,
+                          glyphMargin: false,
+                          lineDecorationsWidth: 0,
+                          lineNumbersMinChars: 2,
+                          padding: { top: 2, bottom: 2 },
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>

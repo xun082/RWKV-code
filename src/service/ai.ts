@@ -50,6 +50,97 @@ export class AIService {
     return data.choices[0]?.message?.content || '';
   }
 
+  // 生成多个不同的答案
+  static async generateMultipleResponses(
+    userMessage: string,
+    count: number = 20,
+    onProgress?: (index: number, content: string, htmlCode: string) => void,
+  ): Promise<Array<{ content: string; htmlCode: string }>> {
+    const systemPrompt: Message = {
+      role: 'system',
+      content: `你是一个专业的前端开发助手。你的任务是帮助用户创建网页内容。
+
+重要规则：
+1. 你只需要生成 <body> 标签内的 HTML 内容
+2. 不要包含 <!DOCTYPE>、<html>、<head>、<body> 等标签
+3. 代码必须包含在 \`\`\`html 和 \`\`\` 标记之间
+4. 使用 Tailwind CSS 类名进行样式设计（已自动引入）
+5. 可以使用 lucide-react 图标（通过 unpkg CDN 已自动引入）
+6. 确保代码美观、响应式、可用
+7. 简短地解释你创建了什么，然后提供代码
+8. 每次都要创建完全不同的设计风格和布局
+
+示例回复格式：
+我为你创建了一个登录表单，包含邮箱和密码输入框。
+
+\`\`\`html
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="bg-white p-8 rounded-lg shadow-md w-96">
+    <h2 class="text-2xl font-bold mb-6">Login</h2>
+    <input type="email" placeholder="Email" class="w-full p-2 border rounded mb-4">
+    <input type="password" placeholder="Password" class="w-full p-2 border rounded mb-4">
+    <button class="w-full bg-blue-600 text-white p-2 rounded">Login</button>
+  </div>
+</div>
+\`\`\``,
+    };
+
+    // 并发生成多个响应
+    const promises = Array.from({ length: count }, async (_, index) => {
+      const messages: Message[] = [
+        systemPrompt,
+        {
+          role: 'user',
+          content: `${userMessage}\n\n请创建一个独特的设计方案（方案 ${index + 1}/${count}）。使用不同的颜色、布局和风格。`,
+        },
+      ];
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'deepseek-ai/DeepSeek-V3',
+            messages,
+            temperature: 0.9, // 更高的温度以获得更多样化的结果
+            max_tokens: 4096,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API request failed: ${response.statusText}`);
+        }
+
+        const data: ChatCompletionResponse = await response.json();
+        const content = data.choices[0]?.message?.content || '';
+        const extractedHTML = this.extractHTMLCode(content);
+        const htmlCode = extractedHTML ? this.wrapHTML(extractedHTML) : '';
+
+        const result = { content, htmlCode };
+
+        if (onProgress) {
+          onProgress(index, content, htmlCode);
+        }
+
+        return result;
+      } catch (error) {
+        console.error(`生成第 ${index + 1} 个响应失败:`, error);
+        return {
+          content: `生成失败: ${error}`,
+          htmlCode: this.wrapHTML(
+            '<div class="min-h-screen flex items-center justify-center"><p class="text-red-500">生成失败</p></div>',
+          ),
+        };
+      }
+    });
+
+    const allResults = await Promise.all(promises);
+    return allResults;
+  }
+
   static async chat(
     userMessage: string,
     conversationHistory: Message[] = [],
