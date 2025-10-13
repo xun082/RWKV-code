@@ -7,14 +7,14 @@ export const HomePage = () => {
   const [inputValue, setInputValue] = useState('');
 
   const suggestions = [
-    'Create a login page',
-    'Create a multi-step form',
-    'Create a dashboard',
-    'Create a blog',
-    'Create a landing page',
-    'Create a pricing page',
-    'Create a contact page',
-    'Create a product page',
+    '创建一个登录页面',
+    '创建一个多步骤表单',
+    '创建一个仪表盘',
+    '创建一个博客页面',
+    '创建一个落地页',
+    '创建一个价格页面',
+    '创建一个联系我们页面',
+    '创建一个产品展示页面',
   ];
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -35,7 +35,7 @@ export const HomePage = () => {
       <div className="w-full max-w-3xl mx-auto flex flex-col items-center gap-8">
         {/* Title */}
         <h1 className="text-4xl md:text-5xl font-semibold text-foreground dark:text-white text-center">
-          What do you want to build?
+          你想创建什么？
         </h1>
 
         {/* Input */}
@@ -44,7 +44,7 @@ export const HomePage = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onSubmit={handleSubmit}
-            placeholder="Create a pricing page..."
+            placeholder="创建一个价格页面..."
           />
         </div>
 
@@ -63,8 +63,8 @@ export const HomePage = () => {
 
         {/* Footer hint */}
         <p className="text-sm text-muted-foreground dark:text-gray-400 text-center">
-          <span className="font-medium">2 messages left</span>, upgrade to Pro
-          for more
+          <span className="font-medium">剩余 2 条消息</span>，升级到 Pro
+          版本获得更多
         </p>
       </div>
     </div>

@@ -190,24 +190,40 @@ export class AIService {
     }
 
     // 如果没有完整代码块，尝试匹配未完成的代码块（实时渲染）
-    const incompleteMatch = content.match(/```html\n([\s\S]*?)$/);
+    const incompleteMatch = content.match(/```html\n?([\s\S]*?)$/);
     if (incompleteMatch && incompleteMatch[1]) {
       const code = incompleteMatch[1].trim();
-      // 确保至少有一些有效的 HTML 内容
-      if (
-        code.length > 10 &&
-        (code.includes('<div') ||
-          code.includes('<button') ||
-          code.includes('<input') ||
-          code.includes('<form') ||
-          code.includes('<h') ||
-          code.includes('<p'))
-      ) {
-        return code;
+      // 更宽松的条件：只要有基本的 HTML 标签就渲染
+      if (code.length > 5 && code.includes('<')) {
+        // 自动闭合未完成的标签，使 HTML 更健壮
+        return this.autoCloseHTML(code);
       }
     }
 
     return null;
+  }
+
+  // 自动闭合未完成的 HTML 标签，使实时预览更流畅
+  private static autoCloseHTML(html: string): string {
+    // 这是一个简单的实现，处理常见的未闭合标签
+    // 对于实时流式渲染，浏览器通常会自动处理未闭合的标签
+    // 但我们可以做一些基本的处理来提高稳定性
+
+    // 移除可能的不完整的最后一个标签（如果它是开始标签但没有闭合）
+    const lines = html.split('\n');
+    let result = html;
+
+    // 如果最后一行是不完整的标签，暂时移除它
+    if (lines.length > 0) {
+      const lastLine = lines[lines.length - 1];
+      // 检查最后一行是否是不完整的开始标签（如 "<div cla" ）
+      if (lastLine.match(/<[a-zA-Z][^>]*$/) && !lastLine.includes('>')) {
+        // 移除最后一个不完整的行
+        result = lines.slice(0, -1).join('\n');
+      }
+    }
+
+    return result;
   }
 
   static wrapHTML(bodyContent: string): string {

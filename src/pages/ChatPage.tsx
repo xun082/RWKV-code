@@ -89,16 +89,14 @@ export const ChatPage = () => {
 
       // 使用流式 API
       let fullContent = '';
-      let updateCounter = 0;
 
       await AIService.streamChat(
         content,
         conversationHistory,
         (chunk: string) => {
           fullContent += chunk;
-          updateCounter++;
 
-          // 更新流式消息内容
+          // 实时更新消息内容
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === tempAIMessageId
@@ -107,18 +105,22 @@ export const ChatPage = () => {
             ),
           );
 
-          // 实时提取并更新 HTML 代码（每隔几次更新一次，避免过于频繁）
-          if (updateCounter % 3 === 0) {
-            const extractedHTML = AIService.extractHTMLCode(fullContent);
-            if (extractedHTML) {
-              const wrappedHTML = AIService.wrapHTML(extractedHTML);
-              setHtmlCode(wrappedHTML);
-            }
+          // 实时检查是否有 HTML 代码可以预览
+          const extractedHTML = AIService.extractHTMLCode(fullContent);
+          if (extractedHTML) {
+            const wrappedHTML = AIService.wrapHTML(extractedHTML);
+            setHtmlCode(wrappedHTML);
           }
         },
       );
 
-      // 最后提取一次 HTML（确保完整）
+      // 流式结束后，最终更新一次
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempAIMessageId ? { ...msg, content: fullContent } : msg,
+        ),
+      );
+
       const finalHTML = AIService.extractHTMLCode(fullContent);
       if (finalHTML) {
         const wrappedHTML = AIService.wrapHTML(finalHTML);
@@ -235,7 +237,7 @@ export const ChatPage = () => {
               srcDoc={htmlCode}
               className="w-full h-full border-0 bg-white"
               title="Preview"
-              sandbox="allow-scripts allow-forms allow-modals"
+              sandbox="allow-scripts allow-forms allow-modals allow-same-origin"
             />
           ) : (
             <Editor
@@ -253,11 +255,11 @@ export const ChatPage = () => {
                 tabSize: 2,
                 wordWrap: 'on',
                 scrollbar: {
-                  vertical: 'visible',
-                  horizontal: 'visible',
+                  vertical: 'hidden',
+                  horizontal: 'hidden',
                   useShadows: false,
-                  verticalScrollbarSize: 8,
-                  horizontalScrollbarSize: 8,
+                  verticalScrollbarSize: 0,
+                  horizontalScrollbarSize: 0,
                 },
               }}
             />
