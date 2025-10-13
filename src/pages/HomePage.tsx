@@ -60,12 +60,6 @@ export const HomePage = () => {
             </button>
           ))}
         </div>
-
-        {/* Footer hint */}
-        <p className="text-sm text-muted-foreground dark:text-gray-400 text-center">
-          <span className="font-medium">剩余 2 条消息</span>，升级到 Pro
-          版本获得更多
-        </p>
       </div>
     </div>
   );
