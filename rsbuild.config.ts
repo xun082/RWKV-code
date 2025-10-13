@@ -8,6 +8,8 @@ export default defineConfig({
       '@/components': './src/components',
       '@/utils': './src/utils',
       '@/pages': './src/pages',
+      '@/service': './src/service',
+      '@/types': './src/types',
     },
   },
 });

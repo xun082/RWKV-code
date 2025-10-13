@@ -69,4 +69,59 @@
       'rlig' 1,
       'calt' 1;
   }
+
+  /* 隐藏滚动条但保持滚动功能 */
+  .custom-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  /* 美化编辑器和预览区域滚动条 */
+  .styled-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+  }
+
+  .styled-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .styled-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .styled-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(155, 155, 155, 0.5);
+    border-radius: 20px;
+    border: transparent;
+  }
+
+  .styled-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(155, 155, 155, 0.7);
+  }
+
+  /* Markdown 样式优化 */
+  .markdown-body {
+    line-height: 1.6;
+  }
+
+  .markdown-body code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  }
+
+  .markdown-body pre {
+    position: relative;
+  }
+
+  .markdown-body pre code {
+    display: block;
+    overflow-x: auto;
+    padding: 0;
+    background: transparent;
+  }
 }

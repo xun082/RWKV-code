@@ -144,12 +144,13 @@ const toolsList = [
 interface ChatgptPromptInputProps
   extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onSubmit'> {
   onSubmit?: (content: string) => void;
+  disabled?: boolean;
 }
 
 export const ChatgptPromptInput = React.forwardRef<
   HTMLTextAreaElement,
   ChatgptPromptInputProps
->(({ className, onSubmit, ...props }, ref) => {
+>(({ className, onSubmit, disabled = false, ...props }, ref) => {
   // ... all state and handlers are unchanged ...
   const internalTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -207,7 +208,7 @@ export const ChatgptPromptInput = React.forwardRef<
   const ActiveToolIcon = activeTool?.icon;
 
   const handleSubmit = () => {
-    if (hasValue && onSubmit) {
+    if (hasValue && onSubmit && !disabled) {
       const content = value.trim();
       onSubmit(content);
       if (!isControlled) {
@@ -275,14 +276,15 @@ export const ChatgptPromptInput = React.forwardRef<
         value={value}
         onChange={handleInputChange}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
+          if (e.key === 'Enter' && !e.shiftKey && !disabled) {
             e.preventDefault();
             handleSubmit();
           }
           if (props.onKeyDown) props.onKeyDown(e);
         }}
+        disabled={disabled}
         placeholder="Message..."
-        className="custom-scrollbar w-full resize-none border-0 bg-transparent p-3 text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-gray-300 focus:ring-0 focus-visible:outline-none min-h-12"
+        className="custom-scrollbar w-full resize-none border-0 bg-transparent p-3 text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-gray-300 focus:ring-0 focus-visible:outline-none min-h-12 disabled:opacity-50 disabled:cursor-not-allowed"
         {...props}
       />
 
@@ -295,7 +297,8 @@ export const ChatgptPromptInput = React.forwardRef<
                 <button
                   type="button"
                   onClick={handlePlusClick}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-foreground dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] focus-visible:outline-none cursor-pointer"
+                  disabled={disabled}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-foreground dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] focus-visible:outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="h-6 w-6" />
                   <span className="sr-only">Attach image</span>
@@ -367,7 +370,8 @@ export const ChatgptPromptInput = React.forwardRef<
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-foreground dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] focus-visible:outline-none cursor-pointer"
+                    disabled={disabled}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-foreground dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] focus-visible:outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Mic className="h-5 w-5" />
                     <span className="sr-only">Record voice</span>
@@ -383,7 +387,7 @@ export const ChatgptPromptInput = React.forwardRef<
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={!hasValue}
+                    disabled={!hasValue || disabled}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/80 disabled:bg-black/40 dark:disabled:bg-[#515151] cursor-pointer disabled:cursor-not-allowed"
                   >
                     <ArrowUp className="h-6 w-6 text-bold" />
