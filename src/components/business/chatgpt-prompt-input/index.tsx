@@ -141,18 +141,28 @@ const toolsList = [
   },
 ];
 
+interface ChatgptPromptInputProps
+  extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onSubmit'> {
+  onSubmit?: (content: string) => void;
+}
+
 export const ChatgptPromptInput = React.forwardRef<
   HTMLTextAreaElement,
-  React.TextareaHTMLAttributes<HTMLTextAreaElement>
->(({ className, ...props }, ref) => {
+  ChatgptPromptInputProps
+>(({ className, onSubmit, ...props }, ref) => {
   // ... all state and handlers are unchanged ...
   const internalTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [value, setValue] = React.useState('');
+  const [internalValue, setInternalValue] = React.useState('');
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [selectedTool, setSelectedTool] = React.useState<string | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
+
+  // 使用外部传入的 value 或内部 state
+  const isControlled = props.value !== undefined;
+  const value = isControlled ? (props.value as string) : internalValue;
+
   React.useImperativeHandle(ref, () => internalTextareaRef.current!, []);
   React.useLayoutEffect(() => {
     const textarea = internalTextareaRef.current;
@@ -162,8 +172,11 @@ export const ChatgptPromptInput = React.forwardRef<
       textarea.style.height = `${newHeight}px`;
     }
   }, [value]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setValue(e.target.value);
+    if (!isControlled) {
+      setInternalValue(e.target.value);
+    }
     if (props.onChange) props.onChange(e);
   };
   const handlePlusClick = () => {
@@ -193,6 +206,17 @@ export const ChatgptPromptInput = React.forwardRef<
     : null;
   const ActiveToolIcon = activeTool?.icon;
 
+  const handleSubmit = () => {
+    if (hasValue && onSubmit) {
+      const content = value.trim();
+      onSubmit(content);
+      if (!isControlled) {
+        setInternalValue('');
+      }
+      setImagePreview(null);
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -215,7 +239,7 @@ export const ChatgptPromptInput = React.forwardRef<
             {' '}
             <button
               type="button"
-              className="transition-transform"
+              className="transition-transform cursor-pointer"
               onClick={() => setIsImageDialogOpen(true)}
             >
               {' '}
@@ -227,7 +251,7 @@ export const ChatgptPromptInput = React.forwardRef<
             </button>{' '}
             <button
               onClick={handleRemoveImage}
-              className="absolute right-2 top-2 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-white/50 dark:bg-[#303030] text-black dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151]"
+              className="absolute right-2 top-2 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-white/50 dark:bg-[#303030] text-black dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] cursor-pointer"
               aria-label="Remove image"
             >
               {' '}
@@ -250,6 +274,13 @@ export const ChatgptPromptInput = React.forwardRef<
         rows={1}
         value={value}
         onChange={handleInputChange}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+          }
+          if (props.onKeyDown) props.onKeyDown(e);
+        }}
         placeholder="Message..."
         className="custom-scrollbar w-full resize-none border-0 bg-transparent p-3 text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-gray-300 focus:ring-0 focus-visible:outline-none min-h-12"
         {...props}
@@ -264,7 +295,7 @@ export const ChatgptPromptInput = React.forwardRef<
                 <button
                   type="button"
                   onClick={handlePlusClick}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-foreground dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] focus-visible:outline-none"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-foreground dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] focus-visible:outline-none cursor-pointer"
                 >
                   <Plus className="h-6 w-6" />
                   <span className="sr-only">Attach image</span>
@@ -281,7 +312,7 @@ export const ChatgptPromptInput = React.forwardRef<
                   <PopoverTrigger asChild>
                     <button
                       type="button"
-                      className="flex h-8 items-center gap-2 rounded-full p-2 text-sm text-foreground dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] focus-visible:outline-none focus-visible:ring-ring"
+                      className="flex h-8 items-center gap-2 rounded-full p-2 text-sm text-foreground dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] focus-visible:outline-none focus-visible:ring-ring cursor-pointer"
                     >
                       <Settings2 className="h-4 w-4" />
                       {!selectedTool && 'Tools'}
@@ -301,7 +332,7 @@ export const ChatgptPromptInput = React.forwardRef<
                         setSelectedTool(tool.id);
                         setIsPopoverOpen(false);
                       }}
-                      className="flex w-full items-center gap-2 rounded-md p-2 text-left text-sm hover:bg-accent dark:hover:bg-[#515151]"
+                      className="flex w-full items-center gap-2 rounded-md p-2 text-left text-sm hover:bg-accent dark:hover:bg-[#515151] cursor-pointer"
                     >
                       {' '}
                       <tool.icon className="h-4 w-4" /> <span>{tool.name}</span>{' '}
@@ -321,7 +352,7 @@ export const ChatgptPromptInput = React.forwardRef<
                 <div className="h-4 w-px bg-border dark:bg-gray-600" />
                 <button
                   onClick={() => setSelectedTool(null)}
-                  className="flex h-8 items-center gap-2 rounded-full px-2 text-sm dark:hover:bg-[#3b4045] hover:bg-accent cursor-pointer dark:text-[#99ceff] text-[#2294ff] transition-colors flex-row items-center justify-center"
+                  className="flex h-8 items-center gap-2 rounded-full px-2 text-sm dark:hover:bg-[#3b4045] hover:bg-accent cursor-pointer dark:text-[#99ceff] text-[#2294ff] transition-colors flex-row justify-center"
                 >
                   {ActiveToolIcon && <ActiveToolIcon className="h-4 w-4" />}
                   {activeTool.shortName}
@@ -336,7 +367,7 @@ export const ChatgptPromptInput = React.forwardRef<
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-foreground dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] focus-visible:outline-none"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-foreground dark:text-white transition-colors hover:bg-accent dark:hover:bg-[#515151] focus-visible:outline-none cursor-pointer"
                   >
                     <Mic className="h-5 w-5" />
                     <span className="sr-only">Record voice</span>
@@ -350,9 +381,10 @@ export const ChatgptPromptInput = React.forwardRef<
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSubmit}
                     disabled={!hasValue}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/80 disabled:bg-black/40 dark:disabled:bg-[#515151]"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/80 disabled:bg-black/40 dark:disabled:bg-[#515151] cursor-pointer disabled:cursor-not-allowed"
                   >
                     <ArrowUp className="h-6 w-6 text-bold" />
                     <span className="sr-only">Send message</span>
