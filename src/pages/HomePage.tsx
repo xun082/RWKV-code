@@ -7,14 +7,14 @@ export const HomePage = () => {
   const [inputValue, setInputValue] = useState('');
 
   const suggestions = [
-    '创建一个登录页面',
-    '创建一个多步骤表单',
-    '创建一个仪表盘',
-    '创建一个博客页面',
-    '创建一个落地页',
-    '创建一个价格页面',
-    '创建一个联系我们页面',
-    '创建一个产品展示页面',
+    '创建一个鲁迅纪念馆网站，包含生平介绍、文学作品展示和历史照片画廊',
+    '设计一个极简风格的个人作品集网站，采用现代配色和网格布局',
+    '创建一个温馨的本地咖啡馆官网，使用暖色调和优雅的排版',
+    '构建一个专业的SaaS产品落地页，包含功能介绍和定价方案',
+    '设计一个响应式的在线教育平台首页，展示课程和师资力量',
+    '创建一个高端的房地产展示网站，包含3D户型图和虚拟看房',
+    '构建一个现代化的企业官网，包含团队介绍和案例展示',
+    '设计一个艺术画廊展览网站，采用沉浸式的视觉呈现',
   ];
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -56,12 +56,12 @@ export const HomePage = () => {
         </div>
 
         {/* Suggestions */}
-        <div className="w-full flex flex-wrap items-center justify-center gap-2">
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
           {suggestions.map((suggestion) => (
             <button
               key={suggestion}
               onClick={() => handleSuggestionClick(suggestion)}
-              className="px-4 py-2 rounded-full text-sm font-medium bg-secondary hover:bg-secondary/80 dark:bg-[#3b4045] dark:hover:bg-[#515151] text-secondary-foreground dark:text-white transition-colors cursor-pointer"
+              className="px-5 py-3.5 rounded-lg text-sm font-medium bg-secondary hover:bg-secondary/80 dark:bg-[#2d3135] dark:hover:bg-[#3b4045] text-secondary-foreground dark:text-white transition-all duration-200 cursor-pointer text-left border border-transparent hover:border-primary/20 dark:hover:border-white/10"
             >
               {suggestion}
             </button>
