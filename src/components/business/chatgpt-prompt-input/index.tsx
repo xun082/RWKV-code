@@ -276,7 +276,12 @@ export const ChatgptPromptInput = React.forwardRef<
         value={value}
         onChange={handleInputChange}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey && !disabled) {
+          if (
+            e.key === 'Enter' &&
+            !e.shiftKey &&
+            !e.nativeEvent.isComposing &&
+            !disabled
+          ) {
             e.preventDefault();
             handleSubmit();
           }

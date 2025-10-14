@@ -167,13 +167,16 @@ export const ChatPage = () => {
             </div>
           )}
           {prompt && !isGenerating && (
-            <div className="mt-2 flex items-center justify-center gap-3">
-              <div className="text-sm text-muted-foreground">
-                当前 Prompt: <span className="font-medium">{prompt}</span>
+            <div className="mt-2 flex items-center justify-center gap-3 max-w-4xl mx-auto">
+              <div className="text-sm text-muted-foreground flex items-center gap-2 flex-1 min-w-0">
+                <span className="flex-shrink-0">当前 Prompt:</span>
+                <span className="font-medium truncate max-w-2xl" title={prompt}>
+                  {prompt}
+                </span>
               </div>
               <button
                 onClick={handleClearResults}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors flex-shrink-0"
               >
                 <Trash2 className="h-3 w-3" />
                 清空重新开始
@@ -189,9 +192,7 @@ export const ChatPage = () => {
           {results.map((result, index) => (
             <div
               key={result.id}
-              onClick={() => setSelectedIndex(index)}
-              onDoubleClick={() => handleOpenDetail(index)}
-              className={`group flex flex-col rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:shadow-xl ${
+              className={`group flex flex-col rounded-lg overflow-hidden border-2 transition-all hover:shadow-xl ${
                 selectedIndex === index
                   ? 'border-blue-500 shadow-lg shadow-blue-500/50'
                   : 'border-gray-300 dark:border-gray-600 hover:border-blue-300'
@@ -204,12 +205,17 @@ export const ChatPage = () => {
               ) : (
                 <>
                   {/* 上部分：预览效果 - 高度翻倍 */}
-                  <div className="relative h-[480px] bg-white border-b-2 border-gray-300 dark:border-gray-600">
+                  <div
+                    className="relative h-[480px] bg-white border-b-2 border-gray-300 dark:border-gray-600 overflow-auto cursor-pointer"
+                    onClick={() => setSelectedIndex(index)}
+                    onDoubleClick={() => handleOpenDetail(index)}
+                  >
                     <iframe
                       srcDoc={result.htmlCode}
-                      className="w-full h-full border-0 bg-white pointer-events-none"
+                      className="w-full border-0 bg-white block pointer-events-none"
                       title={`Preview ${index + 1}`}
                       sandbox="allow-scripts"
+                      style={{ height: '200vh' }}
                     />
                     {/* 全屏按钮 */}
                     <button
@@ -237,13 +243,17 @@ export const ChatPage = () => {
                   </div>
 
                   {/* 下部分：代码 - 高度减半 */}
-                  <div className="h-[130px] bg-[#1e1e1e] relative">
+                  <div
+                    className="h-[130px] bg-[#1e1e1e] relative cursor-pointer"
+                    onClick={() => setSelectedIndex(index)}
+                    onDoubleClick={() => handleOpenDetail(index)}
+                  >
                     <div className="absolute top-0 left-0 right-0 px-2 py-1 bg-[#252525] border-b border-gray-700">
                       <span className="text-[10px] text-gray-400 font-mono">
                         HTML Code
                       </span>
                     </div>
-                    <div className="pt-6 h-full">
+                    <div className="pt-6 h-full pointer-events-none">
                       <Editor
                         height="100%"
                         defaultLanguage="html"
