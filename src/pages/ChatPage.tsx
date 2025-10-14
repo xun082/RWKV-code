@@ -238,7 +238,10 @@ export const ChatPage = () => {
 
       {/* 中间：网页预览网格 */}
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-[#1a1a1a]">
-        <div className="grid grid-cols-5 gap-4 max-w-[2000px] mx-auto">
+        <div
+          className="grid grid-cols-12 gap-4 mx-auto"
+          style={{ maxWidth: '10000px' }}
+        >
           {results.map((result, index) => (
             <div
               key={result.id}
@@ -246,13 +249,13 @@ export const ChatPage = () => {
               onClick={() => handleOpenDetail(index)}
             >
               {result.isLoading ? (
-                <div className="w-full h-[610px] bg-white dark:bg-[#2d2d2d] flex items-center justify-center">
+                <div className="w-full h-[1760px] bg-white dark:bg-[#2d2d2d] flex items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                 </div>
               ) : (
                 <>
                   {/* 上部分：预览效果 */}
-                  <div className="relative h-[480px] bg-white border-b-2 border-gray-300 dark:border-gray-600 overflow-auto">
+                  <div className="relative h-[1700px] bg-white border-b-2 border-gray-300 dark:border-gray-600 overflow-auto">
                     <iframe
                       srcDoc={result.htmlCode || DEFAULT_HTML}
                       className="w-full border-0 bg-white block pointer-events-none"
@@ -264,13 +267,13 @@ export const ChatPage = () => {
                   </div>
 
                   {/* 下部分：代码 */}
-                  <div className="h-[130px] bg-[#1e1e1e] relative">
-                    <div className="absolute top-0 left-0 right-0 px-2 py-1 bg-[#252525] border-b border-gray-700 z-10">
-                      <span className="text-[10px] text-gray-400 font-mono">
+                  <div className="h-[260px] bg-[#1e1e1e] relative">
+                    <div className="absolute top-0 left-0 right-0 px-3 py-2 bg-[#252525] border-b border-gray-700 z-10">
+                      <span className="text-xs text-gray-400 font-mono">
                         HTML Code
                       </span>
                     </div>
-                    <div className="pt-6 h-full">
+                    <div className="pt-8 h-full">
                       <Editor
                         height="100%"
                         defaultLanguage="html"
@@ -280,7 +283,7 @@ export const ChatPage = () => {
                         options={{
                           readOnly: true,
                           minimap: { enabled: false },
-                          fontSize: 9,
+                          fontSize: 11,
                           lineNumbers: 'on',
                           scrollBeyondLastLine: false,
                           automaticLayout: true,
@@ -289,14 +292,14 @@ export const ChatPage = () => {
                           scrollbar: {
                             vertical: 'auto',
                             horizontal: 'auto',
-                            verticalScrollbarSize: 5,
-                            horizontalScrollbarSize: 5,
+                            verticalScrollbarSize: 8,
+                            horizontalScrollbarSize: 8,
                           },
                           folding: false,
                           glyphMargin: false,
                           lineDecorationsWidth: 0,
-                          lineNumbersMinChars: 2,
-                          padding: { top: 2, bottom: 2 },
+                          lineNumbersMinChars: 3,
+                          padding: { top: 4, bottom: 4 },
                         }}
                       />
                     </div>
