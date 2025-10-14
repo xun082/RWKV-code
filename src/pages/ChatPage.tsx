@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { AIService } from '@/service/ai';
 
 interface GeneratedResult {
@@ -45,8 +45,7 @@ export const ChatPage = () => {
   const [prompt, setPrompt] = useState(() => {
     return sessionStorage.getItem('chatPagePrompt') || '';
   });
-  const [completedCount, setCompletedCount] = useState(0);
-  const totalCount = 20;
+  const totalCount = 24;
 
   // 存储每个编辑器实例的引用
   const editorRefs = useRef<Map<number, any>>(new Map());
@@ -117,7 +116,6 @@ export const ChatPage = () => {
   const handleGenerate = async (userPrompt: string) => {
     setPrompt(userPrompt);
     setIsGenerating(true);
-    setCompletedCount(0);
 
     // 清除旧的结果和标记
     sessionStorage.removeItem('chatPageResults');
@@ -157,10 +155,9 @@ export const ChatPage = () => {
             ),
           );
 
-          // 只在第一次收到某个index的数据时增加计数
+          // 标记该index已开始接收数据
           if (!startedIndexes.has(index)) {
             startedIndexes.add(index);
-            setCompletedCount(startedIndexes.size);
           }
         },
       );
@@ -190,14 +187,6 @@ export const ChatPage = () => {
     }
   };
 
-  const handleClearResults = () => {
-    setResults([]);
-    setPrompt('');
-    sessionStorage.removeItem('chatPageResults');
-    sessionStorage.removeItem('chatPagePrompt');
-    sessionStorage.removeItem('hasProcessedInitialMessage');
-  };
-
   return (
     <div className="flex flex-col h-screen bg-background dark:bg-[#1e1e1e]">
       {/* 顶部：输入区域 */}
@@ -208,31 +197,6 @@ export const ChatPage = () => {
             onSubmit={handleGenerate}
             disabled={isGenerating}
           />
-          {isGenerating && (
-            <div className="mt-3 flex items-center justify-center gap-3 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>
-                正在生成 {completedCount}/{totalCount} 个设计方案...
-              </span>
-            </div>
-          )}
-          {prompt && !isGenerating && (
-            <div className="mt-2 flex items-center justify-center gap-3 max-w-4xl mx-auto">
-              <div className="text-sm text-muted-foreground flex items-center gap-2 flex-1 min-w-0">
-                <span className="flex-shrink-0">当前 Prompt:</span>
-                <span className="font-medium truncate max-w-2xl" title={prompt}>
-                  {prompt}
-                </span>
-              </div>
-              <button
-                onClick={handleClearResults}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors flex-shrink-0"
-              >
-                <Trash2 className="h-3 w-3" />
-                清空重新开始
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
