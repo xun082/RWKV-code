@@ -11,7 +11,7 @@ interface StreamChunk {
 const API_URL = 'http://192.168.0.82:8000/v1/chat/completions';
 
 export class AIService {
-  // 提取HTML代码
+  // 提取HTML代码并自动闭合标签
   private static extractHTMLCode(content: string): string {
     // 方式1: 匹配完整的 ```html 代码块
     const codeBlockMatch = content.match(/```html\s*([\s\S]*?)```/);
@@ -23,20 +23,73 @@ export class AIService {
     const incompleteMatch = content.match(/```html\s*([\s\S]*?)$/);
     if (incompleteMatch && incompleteMatch[1]) {
       const code = incompleteMatch[1].trim();
-      // 只要开始有HTML标签就返回，实现实时预览
       if (code.length > 0) {
-        return code;
+        // 自动补全闭合标签，实现实时渲染
+        return this.autoCompleteHTML(code);
       }
     }
 
-    // 方式3: 如果内容直接以 <!DOCTYPE 或 <html 开头（无代码块标记）
+    // 方式3: 匹配未完成的 ```html（还没有换行）
+    const startingMatch = content.match(/```html(.*)$/);
+    if (startingMatch) {
+      const code = startingMatch[1].trim();
+      if (code.length > 0) {
+        return this.autoCompleteHTML(code);
+      }
+    }
+
+    // 方式4: 如果内容直接以 <!DOCTYPE 或 <html 开头（无代码块标记）
     const trimmed = content.trim();
     if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
-      return trimmed;
+      return this.autoCompleteHTML(trimmed);
     }
 
     // 如果没有找到HTML代码，返回空字符串（避免显示说明文字）
     return '';
+  }
+
+  // 自动补全关键HTML标签（html、body、script），使未完成的HTML可以实时渲染
+  private static autoCompleteHTML(html: string): string {
+    // 如果已经有闭合的 </html>，直接返回
+    if (html.includes('</html>')) {
+      return html;
+    }
+
+    let result = html;
+
+    // 移除最后可能不完整的标签（如 "<div cla" 这种）
+    const lastOpenBracket = html.lastIndexOf('<');
+    const lastCloseBracket = html.lastIndexOf('>');
+
+    if (lastOpenBracket > lastCloseBracket) {
+      result = html.substring(0, lastOpenBracket);
+    }
+
+    // 检查并闭合 script 标签
+    const scriptOpenCount = (result.match(/<script[^>]*>/g) || []).length;
+    const scriptCloseCount = (result.match(/<\/script>/g) || []).length;
+
+    for (let i = 0; i < scriptOpenCount - scriptCloseCount; i++) {
+      result += '\n</script>';
+    }
+
+    // 检查并闭合 body 标签
+    const hasBodyOpen = /<body[^>]*>/i.test(result);
+    const hasBodyClose = /<\/body>/i.test(result);
+
+    if (hasBodyOpen && !hasBodyClose) {
+      result += '\n</body>';
+    }
+
+    // 检查并闭合 html 标签
+    const hasHtmlOpen = /<html[^>]*>/i.test(result);
+    const hasHtmlClose = /<\/html>/i.test(result);
+
+    if (hasHtmlOpen && !hasHtmlClose) {
+      result += '\n</html>';
+    }
+
+    return result;
   }
 
   static async generateMultipleResponses(
@@ -49,7 +102,7 @@ export class AIService {
     // 构建 contents 数组：将用户问题重复 count 次
     const contents = Array.from(
       { length: count },
-      () => `User: ${userMessage}\n\nAssistant:`,
+      () => `User: ${userMessage}\n\nAssistant: <think`,
     );
 
     // 存储每个 index 的累积内容
@@ -62,7 +115,7 @@ export class AIService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: contents,
-          max_tokens: 4096,
+          max_tokens: 8192,
           temperature: 1,
           stream: true,
         }),

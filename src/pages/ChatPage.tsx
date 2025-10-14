@@ -147,7 +147,12 @@ export const ChatPage = () => {
           setResults((prev) =>
             prev.map((result, i) =>
               i === index
-                ? { ...result, content, htmlCode, isLoading: false }
+                ? {
+                    ...result,
+                    content,
+                    htmlCode,
+                    isLoading: false,
+                  }
                 : result,
             ),
           );
@@ -249,7 +254,7 @@ export const ChatPage = () => {
                   {/* 上部分：预览效果 */}
                   <div className="relative h-[480px] bg-white border-b-2 border-gray-300 dark:border-gray-600 overflow-auto">
                     <iframe
-                      srcDoc={result.htmlCode}
+                      srcDoc={result.htmlCode || DEFAULT_HTML}
                       className="w-full border-0 bg-white block pointer-events-none"
                       title={`Preview ${index + 1}`}
                       sandbox="allow-scripts"
