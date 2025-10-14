@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
-import { Loader2, Check, Maximize2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { AIService } from '@/service/ai';
 
 interface GeneratedResult {
@@ -41,7 +41,6 @@ export const ChatPage = () => {
     const saved = sessionStorage.getItem('chatPageResults');
     return saved ? JSON.parse(saved) : [];
   });
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [prompt, setPrompt] = useState(() => {
     return sessionStorage.getItem('chatPagePrompt') || '';
@@ -119,7 +118,6 @@ export const ChatPage = () => {
     setPrompt(userPrompt);
     setIsGenerating(true);
     setCompletedCount(0);
-    setSelectedIndex(null);
 
     // 清除旧的结果和标记
     sessionStorage.removeItem('chatPageResults');
@@ -190,7 +188,6 @@ export const ChatPage = () => {
   const handleClearResults = () => {
     setResults([]);
     setPrompt('');
-    setSelectedIndex(null);
     sessionStorage.removeItem('chatPageResults');
     sessionStorage.removeItem('chatPagePrompt');
     sessionStorage.removeItem('hasProcessedInitialMessage');
@@ -240,11 +237,8 @@ export const ChatPage = () => {
           {results.map((result, index) => (
             <div
               key={result.id}
-              className={`group flex flex-col rounded-lg overflow-hidden border-2 transition-all hover:shadow-xl ${
-                selectedIndex === index
-                  ? 'border-blue-500 shadow-lg shadow-blue-500/50'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-300'
-              }`}
+              className="group flex flex-col rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-600 hover:border-blue-400 transition-all hover:shadow-xl cursor-pointer"
+              onClick={() => handleOpenDetail(index)}
             >
               {result.isLoading ? (
                 <div className="w-full h-[610px] bg-white dark:bg-[#2d2d2d] flex items-center justify-center">
@@ -252,56 +246,26 @@ export const ChatPage = () => {
                 </div>
               ) : (
                 <>
-                  {/* 上部分：预览效果 - 高度翻倍 */}
-                  <div
-                    className="relative h-[480px] bg-white border-b-2 border-gray-300 dark:border-gray-600 overflow-auto cursor-pointer"
-                    onClick={() => setSelectedIndex(index)}
-                    onDoubleClick={() => handleOpenDetail(index)}
-                  >
+                  {/* 上部分：预览效果 */}
+                  <div className="relative h-[480px] bg-white border-b-2 border-gray-300 dark:border-gray-600 overflow-auto">
                     <iframe
                       srcDoc={result.htmlCode}
                       className="w-full border-0 bg-white block pointer-events-none"
                       title={`Preview ${index + 1}`}
                       sandbox="allow-scripts"
+                      scrolling="no"
                       style={{ height: '200vh' }}
                     />
-                    {/* 全屏按钮 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenDetail(index);
-                      }}
-                      className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-md p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                      title="打开详情页编辑"
-                    >
-                      <Maximize2 className="h-3.5 w-3.5" />
-                    </button>
-                    {/* 选中标记 */}
-                    {selectedIndex === index && (
-                      <div className="absolute top-2 left-2 bg-blue-500 text-white rounded-full p-1 shadow-lg">
-                        <Check className="h-4 w-4" />
-                      </div>
-                    )}
-                    {/* 底部标签 */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
-                      <span className="text-white text-xs font-semibold">
-                        方案 {index + 1}
-                      </span>
-                    </div>
                   </div>
 
-                  {/* 下部分：代码 - 高度减半 */}
-                  <div
-                    className="h-[130px] bg-[#1e1e1e] relative cursor-pointer"
-                    onClick={() => setSelectedIndex(index)}
-                    onDoubleClick={() => handleOpenDetail(index)}
-                  >
-                    <div className="absolute top-0 left-0 right-0 px-2 py-1 bg-[#252525] border-b border-gray-700">
+                  {/* 下部分：代码 */}
+                  <div className="h-[130px] bg-[#1e1e1e] relative">
+                    <div className="absolute top-0 left-0 right-0 px-2 py-1 bg-[#252525] border-b border-gray-700 z-10">
                       <span className="text-[10px] text-gray-400 font-mono">
                         HTML Code
                       </span>
                     </div>
-                    <div className="pt-6 h-full pointer-events-none">
+                    <div className="pt-6 h-full">
                       <Editor
                         height="100%"
                         defaultLanguage="html"
