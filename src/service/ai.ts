@@ -13,29 +13,30 @@ const API_URL = 'http://192.168.0.82:8000/v1/chat/completions';
 export class AIService {
   // 提取HTML代码
   private static extractHTMLCode(content: string): string {
-    // 方式1: 匹配 ```html 代码块
+    // 方式1: 匹配完整的 ```html 代码块
     const codeBlockMatch = content.match(/```html\s*([\s\S]*?)```/);
     if (codeBlockMatch && codeBlockMatch[1]) {
       return codeBlockMatch[1].trim();
     }
 
-    // 方式2: 如果内容以 <!DOCTYPE 或 <html 开头，说明是完整的HTML
-    const trimmed = content.trim();
-    if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
-      return trimmed;
-    }
-
-    // 方式3: 未完成的代码块（用于流式渲染）
+    // 方式2: 匹配未完成的代码块（用于流式渲染）
     const incompleteMatch = content.match(/```html\s*([\s\S]*?)$/);
     if (incompleteMatch && incompleteMatch[1]) {
       const code = incompleteMatch[1].trim();
+      // 只要开始有HTML标签就返回，实现实时预览
       if (code.length > 0) {
         return code;
       }
     }
 
-    // 默认返回原内容
-    return content;
+    // 方式3: 如果内容直接以 <!DOCTYPE 或 <html 开头（无代码块标记）
+    const trimmed = content.trim();
+    if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
+      return trimmed;
+    }
+
+    // 如果没有找到HTML代码，返回空字符串（避免显示说明文字）
+    return '';
   }
 
   static async generateMultipleResponses(

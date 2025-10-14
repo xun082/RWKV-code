@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
@@ -48,6 +48,40 @@ export const ChatPage = () => {
   });
   const [completedCount, setCompletedCount] = useState(0);
   const totalCount = 20;
+
+  // 存储每个编辑器实例的引用
+  const editorRefs = useRef<Map<number, any>>(new Map());
+
+  // 编辑器挂载回调
+  const handleEditorMount = useCallback(
+    (editorInstance: any, index: number) => {
+      editorRefs.current.set(index, editorInstance);
+    },
+    [],
+  );
+
+  // 滚动编辑器到底部
+  const scrollEditorToBottom = useCallback((index: number) => {
+    const editorInstance = editorRefs.current.get(index);
+    if (editorInstance) {
+      const model = editorInstance.getModel();
+      if (model) {
+        const lineCount = model.getLineCount();
+        editorInstance.revealLine(lineCount, 1); // 1 = Immediate
+      }
+    }
+  }, []);
+
+  // 监听结果变化，自动滚动正在生成的编辑器
+  useEffect(() => {
+    if (isGenerating) {
+      results.forEach((result, index) => {
+        if (!result.isLoading && result.htmlCode) {
+          scrollEditorToBottom(index);
+        }
+      });
+    }
+  }, [results, isGenerating, scrollEditorToBottom]);
 
   // 保存状态到 sessionStorage
   useEffect(() => {
@@ -273,6 +307,7 @@ export const ChatPage = () => {
                         defaultLanguage="html"
                         value={result.htmlCode}
                         theme="vs-dark"
+                        onMount={(editor) => handleEditorMount(editor, index)}
                         options={{
                           readOnly: true,
                           minimap: { enabled: false },
