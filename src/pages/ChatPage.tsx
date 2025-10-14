@@ -13,17 +13,19 @@ interface GeneratedResult {
 }
 
 const DEFAULT_HTML = `<!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome</title>
+  <title>加载中...</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
   <div class="text-center">
-    <h1 class="text-4xl font-bold text-gray-800 mb-4">Welcome!</h1>
-    <p class="text-gray-600">输入你的想法，我将为你生成 20 个不同的设计方案</p>
+    <div class="animate-pulse">
+      <div class="h-8 w-48 bg-gray-300 rounded mx-auto mb-4"></div>
+      <div class="h-4 w-64 bg-gray-200 rounded mx-auto"></div>
+    </div>
   </div>
 </body>
 </html>`;
@@ -101,6 +103,9 @@ export const ChatPage = () => {
     );
     setResults(placeholders);
 
+    // 追踪哪些index已经开始接收数据（用于计数）
+    const startedIndexes = new Set<number>();
+
     try {
       await AIService.generateMultipleResponses(
         userPrompt,
@@ -114,11 +119,20 @@ export const ChatPage = () => {
                 : result,
             ),
           );
-          setCompletedCount((prev) => prev + 1);
+
+          // 只在第一次收到某个index的数据时增加计数
+          if (!startedIndexes.has(index)) {
+            startedIndexes.add(index);
+            setCompletedCount(startedIndexes.size);
+          }
         },
       );
     } catch (error) {
       console.error('生成失败:', error);
+      // 将所有仍在加载的卡片标记为加载完成
+      setResults((prev) =>
+        prev.map((result) => ({ ...result, isLoading: false })),
+      );
     } finally {
       setIsGenerating(false);
     }
