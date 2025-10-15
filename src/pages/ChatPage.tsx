@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Editor from '@monaco-editor/react';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
+import { MarkdownRenderer } from '@/components/business/MarkdownRenderer';
 import { Loader2 } from 'lucide-react';
 import { AIService } from '@/service/ai';
 
@@ -47,39 +47,130 @@ export const ChatPage = () => {
   });
   const totalCount = 24;
 
-  // 存储每个编辑器实例的引用
-  const editorRefs = useRef<Map<number, any>>(new Map());
-
-  // 编辑器挂载回调
-  const handleEditorMount = useCallback(
-    (editorInstance: any, index: number) => {
-      editorRefs.current.set(index, editorInstance);
+  // iframe 渲染队列控制
+  const [iframeRenderQueue, setIframeRenderQueue] = useState<Set<number>>(
+    () => {
+      // 如果有已保存的结果，将所有有内容的 iframe 加入队列（页面刷新恢复）
+      const saved = sessionStorage.getItem('chatPageResults');
+      if (saved) {
+        const savedResults = JSON.parse(saved);
+        const readyIndexes = savedResults
+          .map((result: GeneratedResult, index: number) => ({ result, index }))
+          .filter(
+            ({ result }: { result: GeneratedResult }) =>
+              !result.isLoading && result.htmlCode,
+          )
+          .map(({ index }: { index: number }) => index);
+        return new Set(readyIndexes);
+      }
+      return new Set();
     },
-    [],
   );
 
-  // 滚动编辑器到底部
-  const scrollEditorToBottom = useCallback((index: number) => {
-    const editorInstance = editorRefs.current.get(index);
-    if (editorInstance) {
-      const model = editorInstance.getModel();
-      if (model) {
-        const lineCount = model.getLineCount();
-        editorInstance.revealLine(lineCount, 1); // 1 = Immediate
-      }
-    }
-  }, []);
+  // 标记是否是第一次渲染（页面会话的第一次生成）
+  const hasRenderedOnce = useRef(false);
 
-  // 监听结果变化，自动滚动正在生成的编辑器
+  const batchSize = 8; // 后续每批渲染 8 个 iframe
+  const isBatchProcessing = useRef(false); // 标记是否正在批处理中
+  const resultsRef = useRef(results); // 存储最新的 results 引用
+
+  // 更新 resultsRef
+  useEffect(() => {
+    resultsRef.current = results;
+  }, [results]);
+
+  // 存储每个 Markdown 容器的引用
+  const markdownContainerRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  // 滚动 Markdown 容器到底部 - 使用 requestAnimationFrame 确保在渲染后执行
+  const scrollMarkdownToBottom = (index: number) => {
+    requestAnimationFrame(() => {
+      const container = markdownContainerRefs.current.get(index);
+      if (container) {
+        // 直接设置 scrollTop，smooth behavior 已在 CSS 中定义
+        container.scrollTop = container.scrollHeight;
+      }
+    });
+  };
+
+  // 监听结果变化，自动滚动正在生成的 Markdown
   useEffect(() => {
     if (isGenerating) {
       results.forEach((result, index) => {
-        if (!result.isLoading && result.htmlCode) {
-          scrollEditorToBottom(index);
+        if (!result.isLoading && result.content) {
+          scrollMarkdownToBottom(index);
         }
       });
     }
-  }, [results, isGenerating, scrollEditorToBottom]);
+  }, [results, isGenerating]);
+
+  // iframe 渲染队列管理 - 逐步加载 iframe
+  useEffect(() => {
+    // 找出所有已经有内容（不再 loading）的结果索引
+    const readyIndexes = results
+      .map((result, index) => ({ result, index }))
+      .filter(({ result }) => !result.isLoading && result.htmlCode)
+      .map(({ index }) => index)
+      .sort((a, b) => a - b); // 按索引排序，确保顺序渲染
+
+    // 找出还没有在队列中的索引（按顺序）
+    const notInQueue = readyIndexes.filter(
+      (index) => !iframeRenderQueue.has(index),
+    );
+
+    if (notInQueue.length === 0) {
+      return; // 没有需要处理的
+    }
+
+    // 第一次渲染：一次性全部加载
+    if (!hasRenderedOnce.current) {
+      setIframeRenderQueue(new Set(readyIndexes));
+      hasRenderedOnce.current = true;
+      return;
+    }
+
+    // 后续渲染：如果没有正在进行的批处理，启动新的批处理
+    if (!isBatchProcessing.current) {
+      isBatchProcessing.current = true;
+
+      const processBatch = () => {
+        setIframeRenderQueue((prevQueue) => {
+          // 实时获取最新的 ready 但未渲染的索引
+          const currentReadyIndexes = resultsRef.current
+            .map((result, index) => ({ result, index }))
+            .filter(({ result }) => !result.isLoading && result.htmlCode)
+            .map(({ index }) => index)
+            .sort((a, b) => a - b);
+
+          const stillNotInQueue = currentReadyIndexes.filter(
+            (index) => !prevQueue.has(index),
+          );
+
+          if (stillNotInQueue.length === 0) {
+            isBatchProcessing.current = false;
+            return prevQueue;
+          }
+
+          const newQueue = new Set(prevQueue);
+
+          // 每次添加最多 batchSize 个（按顺序）
+          const toAdd = stillNotInQueue.slice(0, batchSize);
+          toAdd.forEach((index) => newQueue.add(index));
+
+          // 如果还有剩余，继续下一批
+          if (stillNotInQueue.length > batchSize) {
+            setTimeout(processBatch, 300);
+          } else {
+            isBatchProcessing.current = false;
+          }
+
+          return newQueue;
+        });
+      };
+
+      processBatch();
+    }
+  }, [results, iframeRenderQueue, batchSize]);
 
   // 保存状态到 sessionStorage
   useEffect(() => {
@@ -120,6 +211,10 @@ export const ChatPage = () => {
     // 清除旧的结果和标记
     sessionStorage.removeItem('chatPageResults');
     sessionStorage.removeItem('hasProcessedInitialMessage');
+
+    // 清空 iframe 渲染队列，重置批处理标记
+    setIframeRenderQueue(new Set());
+    isBatchProcessing.current = false;
 
     // 初始化 20 个占位符
     const placeholders: GeneratedResult[] = Array.from(
@@ -221,53 +316,48 @@ export const ChatPage = () => {
               ) : (
                 <>
                   {/* 上部分：预览效果 */}
-                  <div className="relative h-[1700px] bg-white border-b-2 border-gray-300 dark:border-gray-600 overflow-auto">
-                    <iframe
-                      srcDoc={result.htmlCode || DEFAULT_HTML}
-                      className="w-full border-0 bg-white block pointer-events-none"
-                      title={`Preview ${index + 1}`}
-                      sandbox="allow-scripts"
-                      scrolling="no"
-                      style={{ height: '200vh' }}
-                    />
-                  </div>
-
-                  {/* 下部分：代码 */}
-                  <div className="h-[260px] bg-[#1e1e1e] relative">
-                    <div className="absolute top-0 left-0 right-0 px-3 py-2 bg-[#252525] border-b border-gray-700 z-10">
-                      <span className="text-xs text-gray-400 font-mono">
-                        HTML Code
-                      </span>
-                    </div>
-                    <div className="pt-8 h-full">
-                      <Editor
-                        height="100%"
-                        defaultLanguage="html"
-                        value={result.htmlCode}
-                        theme="vs-dark"
-                        onMount={(editor) => handleEditorMount(editor, index)}
-                        options={{
-                          readOnly: true,
-                          minimap: { enabled: false },
-                          fontSize: 11,
-                          lineNumbers: 'on',
-                          scrollBeyondLastLine: false,
-                          automaticLayout: true,
-                          tabSize: 2,
-                          wordWrap: 'off',
-                          scrollbar: {
-                            vertical: 'auto',
-                            horizontal: 'auto',
-                            verticalScrollbarSize: 8,
-                            horizontalScrollbarSize: 8,
-                          },
-                          folding: false,
-                          glyphMargin: false,
-                          lineDecorationsWidth: 0,
-                          lineNumbersMinChars: 3,
-                          padding: { top: 4, bottom: 4 },
+                  <div className="relative h-[1700px] bg-white border-b-2 border-gray-300 dark:border-gray-600 overflow-auto will-change-contents">
+                    {iframeRenderQueue.has(index) ? (
+                      <iframe
+                        key={`iframe-${result.id}`}
+                        srcDoc={result.htmlCode || DEFAULT_HTML}
+                        className="w-full border-0 bg-white block pointer-events-none"
+                        title={`Preview ${index + 1}`}
+                        sandbox="allow-scripts"
+                        scrolling="no"
+                        loading="lazy"
+                        style={{
+                          height: '200vh',
+                          contentVisibility: 'auto',
                         }}
                       />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-[#2d2d2d]">
+                        <div className="text-center">
+                          <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            准备渲染预览...
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 下部分：Markdown 渲染内容 */}
+                  <div
+                    ref={(el) => {
+                      if (el) {
+                        markdownContainerRefs.current.set(index, el);
+                      }
+                    }}
+                    className="h-[260px] bg-white dark:bg-[#1e1e1e] relative overflow-auto will-change-scroll"
+                    style={{
+                      scrollBehavior: 'smooth',
+                      isolation: 'isolate',
+                    }}
+                  >
+                    <div className="p-4">
+                      <MarkdownRenderer content={result.content} />
                     </div>
                   </div>
                 </>

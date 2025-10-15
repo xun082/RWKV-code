@@ -116,6 +116,13 @@
 
   .markdown-body pre {
     position: relative;
+    contain: content;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: scroll-position;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(107, 114, 128, 0.5) rgba(0, 0, 0, 0.05);
   }
 
   .markdown-body pre code {
@@ -123,5 +130,26 @@
     overflow-x: auto;
     padding: 0;
     background: transparent;
+  }
+
+  /* 代码块专用滚动条样式 - WebKit */
+  .markdown-body pre::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .markdown-body pre::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+  }
+
+  .markdown-body pre::-webkit-scrollbar-thumb {
+    background: rgba(107, 114, 128, 0.5);
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+
+  .markdown-body pre::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 114, 128, 0.7);
   }
 }
