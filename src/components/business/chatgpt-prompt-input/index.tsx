@@ -54,7 +54,7 @@ export const ChatgptPromptInput = React.forwardRef<
   return (
     <div
       className={cn(
-        'flex items-center gap-4 rounded-[32px] p-6 shadow-xl transition-colors bg-white border-2 dark:bg-[#303030] dark:border-gray-600',
+        'flex items-center gap-4 rounded-[32px] p-8 shadow-xl transition-colors bg-white border-2 dark:bg-[#303030] dark:border-gray-600',
         className,
       )}
     >
@@ -77,8 +77,8 @@ export const ChatgptPromptInput = React.forwardRef<
         }}
         disabled={disabled}
         placeholder="描述你想要创建的网页..."
-        className="custom-scrollbar flex-1 resize-none border-0 bg-transparent text-2xl text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-gray-400 focus:ring-0 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ minHeight: '48px', maxHeight: '300px' }}
+        className="custom-scrollbar flex-1 resize-none border-0 bg-transparent text-3xl text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-gray-400 focus:ring-0 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ minHeight: '60px', maxHeight: '300px' }}
         {...props}
       />
 
