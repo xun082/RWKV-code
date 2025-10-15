@@ -191,8 +191,10 @@ export const ChatPage = () => {
     <div className="flex flex-col h-screen bg-background dark:bg-[#1e1e1e]">
       {/* 顶部：输入区域 */}
       <div className="border-b border-border dark:border-gray-700 bg-white dark:bg-[#252525]">
-        <div className="max-w-4xl mx-auto p-4">
+        <div className="max-w-[1400px] mx-auto p-6">
           <ChatgptPromptInput
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
             placeholder="描述你想要创建的网页..."
             onSubmit={handleGenerate}
             disabled={isGenerating}
