@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { ArrowLeft, Eye, Code2, Copy, Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const DEFAULT_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -22,6 +23,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 export const DetailPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // 从路由状态中获取传递的数据
   const initialHtmlCode =
@@ -45,7 +47,7 @@ export const DetailPage = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('复制失败:', error);
+      console.error(t('detailpage.copyFailed'), error);
     }
   };
 
@@ -71,31 +73,31 @@ export const DetailPage = () => {
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            返回
+            {t('detailpage.back')}
           </button>
           {resultIndex !== undefined && (
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              方案 {resultIndex + 1}
+              {t('detailpage.solution', { number: resultIndex + 1 })}
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-2">
           {/* 操作按钮 */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-2">
             <button
               onClick={handleCopy}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <Copy className="h-4 w-4" />
-              {copied ? '已复制' : '复制代码'}
+              {copied ? t('detailpage.copied') : t('detailpage.copyCode')}
             </button>
             <button
               onClick={handleDownload}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
             >
               <Download className="h-4 w-4" />
-              下载
+              {t('detailpage.download')}
             </button>
           </div>
         </div>
@@ -109,7 +111,7 @@ export const DetailPage = () => {
             <div className="px-4 py-2 bg-[#252525] border-b border-gray-700">
               <span className="text-sm text-gray-300 font-medium flex items-center gap-2">
                 <Code2 className="h-4 w-4" />
-                HTML 代码编辑器
+                {t('detailpage.codeEditor')}
               </span>
             </div>
             <div className="flex-1">
@@ -142,10 +144,10 @@ export const DetailPage = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-700 dark:text-gray-300 font-medium flex items-center gap-2">
                   <Eye className="h-4 w-4" />
-                  实时预览
+                  {t('detailpage.preview')}
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  编辑代码实时更新
+                  {t('detailpage.updateRealtime')}
                 </span>
               </div>
             </div>

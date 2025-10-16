@@ -4,6 +4,7 @@ import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
 import { MarkdownRenderer } from '@/components/business/MarkdownRenderer';
 import { Loader2 } from 'lucide-react';
 import { AIService } from '@/service/ai';
+import { useTranslation } from 'react-i18next';
 
 interface GeneratedResult {
   id: string;
@@ -33,6 +34,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 export const ChatPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const initialMessage = (location.state as { initialMessage?: string })
     ?.initialMessage;
 
@@ -290,7 +292,7 @@ export const ChatPage = () => {
           <ChatgptPromptInput
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="描述你想要创建的网页..."
+            placeholder={t('chatpage.inputPlaceholder')}
             onSubmit={handleGenerate}
             disabled={isGenerating}
           />
@@ -336,7 +338,7 @@ export const ChatPage = () => {
                         <div className="text-center">
                           <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-2" />
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            准备渲染预览...
+                            {t('chatpage.preparingRender')}
                           </p>
                         </div>
                       </div>

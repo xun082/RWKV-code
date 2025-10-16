@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 interface StreamChunk {
   object: string;
   choices: {
@@ -150,7 +152,8 @@ export class AIService {
     // 构建 contents 数组：将用户问题重复 count 次
     const contents = Array.from(
       { length: count },
-      () => `User: 用 HTML ${userMessage}\n\nAssistant: <think`, // 这个 <think 是我们使用的特定LLM的必要的模板标志
+      () =>
+        `User: ${i18n.t('aiService.promptPrefix')} ${userMessage}\n\nAssistant: <think`, // 这个 <think 是我们使用的特定LLM的必要的模板标志
     );
 
     // 存储每个 index 的累积内容
@@ -175,12 +178,16 @@ export class AIService {
       if (!response.ok) {
         const text = await response.text().catch(() => '');
         throw new Error(
-          `HTTP ${response.status} ${response.statusText} ${text}`,
+          i18n.t('aiService.httpError', {
+            status: response.status,
+            statusText: response.statusText,
+            text,
+          }),
         );
       }
 
       if (!response.body) {
-        throw new Error('ReadableStream 不可用');
+        throw new Error(i18n.t('aiService.streamNotAvailable'));
       }
 
       const reader: ReadableStreamDefaultReader<Uint8Array> =
@@ -260,7 +267,7 @@ export class AIService {
 
       return results;
     } catch (err: unknown) {
-      console.error('生成失败:', err);
+      console.error(i18n.t('aiService.generationFailed'), err);
       throw err;
     }
   }
