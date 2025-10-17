@@ -2,12 +2,14 @@ import i18n, { type Resource } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import enCommon from './locales/en/common.json';
 import zhCommon from './locales/zh/common.json';
+import jaCommon from './locales/ja/common.json';
 
 export const defaultNS = 'common';
 
 export const resources = {
   en: { common: enCommon },
   zh: { common: zhCommon },
+  ja: { common: jaCommon },
 } as const satisfies Resource;
 
 i18n.use(initReactI18next).init({
