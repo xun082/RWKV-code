@@ -5,6 +5,8 @@ import { DetailPage } from '@/pages/DetailPage';
 import './i18n';
 
 const App = () => {
+  console.log(import.meta.env);
+
   return (
     <BrowserRouter>
       <Routes>

@@ -10,7 +10,9 @@ interface StreamChunk {
   }[];
 }
 
-const API_URL = 'http://192.168.0.82:8000/v1/chat/completions';
+const API_URL =
+  import.meta.env.PUBLIC_RWKV_API_URL ||
+  'http://192.168.0.82:8000/v1/chat/completions';
 
 export class AIService {
   // 提取HTML代码并自动闭合标签
