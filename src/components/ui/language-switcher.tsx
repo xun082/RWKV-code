@@ -10,7 +10,8 @@ export const LanguageSwitcher = () => {
   const languages = [
     { code: 'zh', label: '中文' },
     { code: 'en', label: 'English' },
-    { code: 'ja', label: '日本語' },
+    { code: 'ja', label: 'Nihongo' },
+    { code: 'hi', label: 'हिंदी' },
   ];
 
   const currentLanguage =
