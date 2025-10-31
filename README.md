@@ -46,15 +46,22 @@ docker compose up --build -d
 
 访问：[http://localhost:3000](http://localhost:3000)
 
-## ⚙️ 环境变量
+## ⚙️ 环境变量配置
 
-在根目录创建 `.env` 文件：
+在项目根目录下创建一个 `.env` 文件，并添加以下内容：
 
+```bash
+PUBLIC_RWKV_API_URL=http://192.168.0.82:8000/v1/chat/completions
 ```
-PUBLIC_RWKV_API_URL = http://192.168.0.82:8000/v1/chat/completions
-```
 
-代码中使用：
+> ⚠️ 注意：
+> `PUBLIC_RWKV_API_URL` 是前端访问 RWKV 后端 API 的地址，请根据你的实际部署环境修改为对应的 IP 或域名。
+> 例如，如果你在本地或远程服务器上部署了 RWKV Lightning 服务，请填写该服务的实际访问地址。
+
+后端项目仓库地址：
+👉 [RWKV Lightning（GitHub）](https://github.com/RWKV-Vibe/rwkv_lightning)
+
+你可以在该仓库中找到后端服务的安装与运行说明，用于搭建与前端交互的 RWKV API 服务。
 
 ## 🖥️ 大屏显示说明
 
